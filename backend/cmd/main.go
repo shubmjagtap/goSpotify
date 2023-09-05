@@ -6,16 +6,17 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/shubmjagtap/goSpotify/backend/api"
 )
 
 func main() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/", api.homeHandler).Methods("GET")
+	router.HandleFunc("/", api.HomeHandler).Methods("GET")
 
-	router.HandleFunc("/api/data/{id:[0-9a-zA-Z]+}", api.apiDataIdHandler).Methods("GET")
+	router.HandleFunc("/api/data/{id:[0-9a-zA-Z]+}", api.ApiDataIdHandler).Methods("GET")
 
-	router.HandleFunc("/api/data", api.apiDataHandler).Methods("GET")
+	router.HandleFunc("/api/data", api.ApiDataHandler).Methods("GET")
 
 	// Create CORS middleware with desired options
 	corsMiddleware := handlers.CORS(

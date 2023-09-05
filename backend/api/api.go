@@ -119,12 +119,12 @@ var chats = []models.Chat{
 	},
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
+func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "API is Running...")
 	log.Printf("Home page accessed from IP: %s", r.RemoteAddr)
 }
 
-func apiDataHandler(w http.ResponseWriter, r *http.Request) {
+func ApiDataHandler(w http.ResponseWriter, r *http.Request) {
 	chatsJSON, err := json.Marshal(chats)
 	if err != nil {
 		http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
@@ -140,7 +140,7 @@ func apiDataHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("API data served to IP: %s", r.RemoteAddr)
 }
 
-func apiDataIdHandler(w http.ResponseWriter, r *http.Request) {
+func ApiDataIdHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
