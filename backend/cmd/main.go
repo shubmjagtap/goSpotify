@@ -16,6 +16,14 @@ func main() {
 	}
 	defer database.Close(client, ctx, cancel)
 
+	// Setup the database and collection
+	userCollection, err := database.SetupDatabase(client)
+	if err != nil {
+		fmt.Println("Failed to setup database:", err)
+		return
+	}
+	fmt.Println(userCollection)
+
 	// Create a router
 	router := server.CreateRouter()
 

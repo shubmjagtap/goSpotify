@@ -45,3 +45,9 @@ func InitDb() (*mongo.Client, context.Context, context.CancelFunc, error) {
 	}()
 	return client, ctx, cancel, nil
 }
+
+func SetupDatabase(client *mongo.Client) (*mongo.Collection, error) {
+	goChatDB := client.Database("goChat")
+	userCollection := goChatDB.Collection("userCollection")
+	return userCollection, nil
+}
