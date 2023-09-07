@@ -28,7 +28,7 @@ func main() {
 	router := server.CreateRouter()
 
 	// Create routes for the router
-	server.CreateRoutes(router)
+	server.CreateRoutes(router, client)
 
 	// Setup CORS middleware
 	corsRouter := server.SetupCorsMiddleware(router)

@@ -51,9 +51,7 @@ func RegisterUser(newUser models.User, client *mongo.Client) error {
 	return nil
 }
 
-func SignUpUser(w http.ResponseWriter, r *http.Request) {
-
-	var clientt *mongo.Client
+func SignUpUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 
 	var newUser models.User
 	decoder := json.NewDecoder(r.Body)
@@ -68,7 +66,7 @@ func SignUpUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userExists, err := CheckUserExistence(newUser.Email, clientt)
+	userExists, err := CheckUserExistence(newUser.Email, client)
 	if err != nil {
 		http.Error(w, "Error checking user existence", http.StatusInternalServerError)
 		return
@@ -78,7 +76,7 @@ func SignUpUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	registerationErr := RegisterUser(newUser, clientt)
+	registerationErr := RegisterUser(newUser, client)
 	if registerationErr != nil {
 		http.Error(w, "Error in registration of  user", http.StatusInternalServerError)
 		return

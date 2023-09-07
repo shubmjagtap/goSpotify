@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/shubmjagtap/goSpotify/backend/api"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func CreateRouter() *mux.Router {
@@ -14,10 +15,12 @@ func CreateRouter() *mux.Router {
 	return router
 }
 
-func CreateRoutes(router *mux.Router) {
+func CreateRoutes(router *mux.Router, client *mongo.Client) {
 	router.HandleFunc("/", api.HomeHandler).Methods("GET")
 	router.HandleFunc("/user/api/login", api.LoginUser).Methods("POST")
-	router.HandleFunc("/user/api/signup", api.SignUpUser).Methods("POST")
+	router.HandleFunc("/user/api/signup", func(w http.ResponseWriter, r *http.Request) {
+		api.SignUpUser(w, r, client)
+	}).Methods("POST")
 }
 
 func SetupCorsMiddleware(router *mux.Router) http.Handler {
