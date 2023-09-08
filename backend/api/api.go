@@ -40,20 +40,15 @@ func CheckUserExistence(email string, client *mongo.Client) (bool, error) {
 	return true, nil
 }
 
-func RegisterUser(newUser models.User, client *mongo.Client) (models.User, error) {
+func RegisterUser(newUser models.User, client *mongo.Client) error {
 	goChatDB := client.Database("goChat")
 	userCollection := goChatDB.Collection("userCollection")
 	_, err := userCollection.InsertOne(context.Background(), newUser)
 	if err != nil {
-		return models.User{}, err
+		fmt.Println("Insertion Error")
+		return err
 	}
-	var insertedUser models.User
-	err = userCollection.FindOne(context.Background(), bson.M{"_id": newUser.ID}).Decode(&insertedUser)
-	if err != nil {
-		return models.User{}, err
-	}
-
-	return insertedUser, nil
+	return nil
 }
 
 // function for handling signup endpoint
@@ -85,21 +80,12 @@ func SignUpUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 		return
 	}
 
-	registeredUser, registrationErr := RegisterUser(newUser, client)
+	registrationErr := RegisterUser(newUser, client)
 	if registrationErr != nil {
 		log.Printf("Error in registration of user: %v\n", registrationErr)
 		http.Error(w, "Error in registration of user", http.StatusInternalServerError)
 		return
-	} else {
-		jsonResponse, err := json.Marshal(registeredUser)
-		if err != nil {
-			log.Printf("Error encoding JSON response: %v\n", err)
-			http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(jsonResponse)
-		log.Println("User registration successful")
 	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("User registered successfully"))
 }
