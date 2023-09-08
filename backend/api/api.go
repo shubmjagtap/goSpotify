@@ -40,48 +40,66 @@ func CheckUserExistence(email string, client *mongo.Client) (bool, error) {
 	return true, nil
 }
 
-// RegisterUser inserts a new user into the MongoDB database.
-func RegisterUser(newUser models.User, client *mongo.Client) error {
+func RegisterUser(newUser models.User, client *mongo.Client) (models.User, error) {
 	goChatDB := client.Database("goChat")
 	userCollection := goChatDB.Collection("userCollection")
 	_, err := userCollection.InsertOne(context.Background(), newUser)
 	if err != nil {
-		return err
+		return models.User{}, err
 	}
-	return nil
+	var insertedUser models.User
+	err = userCollection.FindOne(context.Background(), bson.M{"_id": newUser.ID}).Decode(&insertedUser)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	return insertedUser, nil
 }
 
+// function for handling signup endpoint
 func SignUpUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
-
 	var newUser models.User
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&newUser); err != nil {
+		log.Printf("Error decoding JSON data: %v\n", err)
 		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
 	if newUser.Name == "" || newUser.Email == "" || newUser.Password == "" || newUser.Pic == "" {
+		log.Println("Missing required fields")
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
 
 	userExists, err := CheckUserExistence(newUser.Email, client)
 	if err != nil {
+		log.Printf("Error checking user existence: %v\n", err)
 		http.Error(w, "Error checking user existence", http.StatusInternalServerError)
 		return
 	}
 	if userExists {
+		log.Println("User with this email already exists")
 		http.Error(w, "User with this email already exists", http.StatusConflict)
 		return
 	}
 
-	registerationErr := RegisterUser(newUser, client)
-	if registerationErr != nil {
-		http.Error(w, "Error in registration of  user", http.StatusInternalServerError)
+	registeredUser, registrationErr := RegisterUser(newUser, client)
+	if registrationErr != nil {
+		log.Printf("Error in registration of user: %v\n", registrationErr)
+		http.Error(w, "Error in registration of user", http.StatusInternalServerError)
 		return
+	} else {
+		jsonResponse, err := json.Marshal(registeredUser)
+		if err != nil {
+			log.Printf("Error encoding JSON response: %v\n", err)
+			http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonResponse)
+		log.Println("User registration successful")
 	}
 }
-
-// if user is not present then make new entry for that user
-// if user is sucessfully created then send that user else send unsuccessfull message
