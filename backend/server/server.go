@@ -16,11 +16,13 @@ func CreateRouter() *mux.Router {
 }
 
 func CreateRoutes(router *mux.Router, client *mongo.Client) {
-	router.HandleFunc("/", api.HomeHandler).Methods("GET")
 	router.HandleFunc("/user/api/login", api.LoginUser).Methods("POST")
 	router.HandleFunc("/user/api/signup", func(w http.ResponseWriter, r *http.Request) {
 		api.SignUpUser(w, r, client)
 	}).Methods("POST")
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		api.HomeHandler(w, r, client)
+	}).Methods("GET")
 }
 
 func SetupCorsMiddleware(router *mux.Router) http.Handler {

@@ -12,9 +12,55 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "API is Running...")
-	log.Printf("Home page accessed from IP: %s", r.RemoteAddr)
+func HomeHandler(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+	// Get a handle to the "goChat" database and the "userCollection" collection
+	database := client.Database("goChat")
+	collection := database.Collection("userCollection")
+
+	// Define a filter to match all documents (if you want all data)
+	filter := bson.M{}
+
+	// Perform a find operation to retrieve all documents in the collection
+	cursor, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		log.Printf("Error querying database: %v\n", err)
+		http.Error(w, "Error querying database", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.TODO())
+
+	// Create a slice to hold the decoded documents
+	var results []bson.M
+
+	// Iterate over the cursor and decode documents into the results slice
+	for cursor.Next(context.TODO()) {
+		var result bson.M
+		if err := cursor.Decode(&result); err != nil {
+			log.Printf("Error decoding document: %v\n", err)
+			http.Error(w, "Error decoding document", http.StatusInternalServerError)
+			return
+		}
+		results = append(results, result)
+	}
+
+	// If there are no results, return a message
+	if len(results) == 0 {
+		fmt.Fprintln(w, "No data found")
+		return
+	}
+
+	// Convert the results slice to JSON
+	jsonData, err := json.Marshal(results)
+	if err != nil {
+		log.Printf("Error encoding JSON: %v\n", err)
+		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
+		return
+	}
+
+	// Set the response content type and write the JSON data to the response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonData)
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
