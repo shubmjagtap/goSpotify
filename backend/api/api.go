@@ -63,9 +63,85 @@ func HomeHandler(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 	w.Write(jsonData)
 }
 
-func LoginUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Logging In User...")
-	log.Printf("Home page accessed from IP: %s", r.RemoteAddr)
+func CheckUserExistenceForLogin(email string, client *mongo.Client) (bool, error) {
+
+	goChatDB := client.Database("goChat")
+	userCollection := goChatDB.Collection("userCollection")
+
+	filter := bson.M{"email": email}
+
+	var existingUser bson.M
+	if err := userCollection.FindOne(context.Background(), filter).Decode(&existingUser); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func CheckLogin(loginInfo models.UserLoginInformation, client *mongo.Client) (bool, error) {
+	userCollection := client.Database("goChat").Collection("userCollection")
+
+	var user models.User
+	err := userCollection.FindOne(context.Background(), bson.M{"email": loginInfo.Email}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+
+	if user.Password == loginInfo.Password {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+func LoginUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+
+	var loginInfo models.UserLoginInformation
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&loginInfo); err != nil {
+		log.Printf("Error decoding JSON data: %v\n", err)
+		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if loginInfo.Email == "" || loginInfo.Password == "" {
+		log.Println("Missing required fields")
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+
+	userExists, err := CheckUserExistenceForLogin(loginInfo.Email, client)
+	if err != nil {
+		log.Printf("Error checking user existence: %v\n", err)
+		http.Error(w, "Error checking user existence", http.StatusInternalServerError)
+		return
+	}
+	if !userExists {
+		log.Println("User with this email doesnot exist")
+		http.Error(w, "User with this email doesnot exist", http.StatusConflict)
+		return
+	}
+
+	passwordMatches, err := CheckLogin(loginInfo, client)
+	if passwordMatches {
+		// Passwords match, send a positive response indicating successful login.
+		response := map[string]string{"message": "Successfully logged in"}
+		jsonResponse, _ := json.Marshal(response)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonResponse)
+	} else {
+		// Passwords do not match, send a negative response indicating login failure.
+		http.Error(w, "Failed to log in", http.StatusUnauthorized)
+	}
 }
 
 func CheckUserExistence(email string, client *mongo.Client) (bool, error) {
