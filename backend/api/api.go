@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/shubmjagtap/goSpotify/backend/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -63,46 +64,23 @@ func HomeHandler(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 	w.Write(jsonData)
 }
 
-func CheckUserExistenceForLogin(email string, client *mongo.Client) (bool, error) {
-
-	goChatDB := client.Database("goChat")
-	userCollection := goChatDB.Collection("userCollection")
-
-	filter := bson.M{"email": email}
-
-	var existingUser bson.M
-	if err := userCollection.FindOne(context.Background(), filter).Decode(&existingUser); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
-}
-
-func CheckLogin(loginInfo models.UserLoginInformation, client *mongo.Client) (bool, error) {
+func CheckUserExistenceForLogin(email string, client *mongo.Client) (models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	userCollection := client.Database("goChat").Collection("userCollection")
-
+	filter := bson.M{"email": email}
 	var user models.User
-	err := userCollection.FindOne(context.Background(), bson.M{"email": loginInfo.Email}).Decode(&user)
+	err := userCollection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return false, nil
-		} else {
-			return false, err
+			return models.User{}, nil // User not found, return empty user
 		}
+		return models.User{}, err
 	}
-
-	if user.Password == loginInfo.Password {
-		return true, nil
-	} else {
-		return false, nil
-	}
+	return user, nil
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
-
 	var loginInfo models.UserLoginInformation
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&loginInfo); err != nil {
@@ -118,29 +96,33 @@ func LoginUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 		return
 	}
 
-	userExists, err := CheckUserExistenceForLogin(loginInfo.Email, client)
+	user, err := CheckUserExistenceForLogin(loginInfo.Email, client)
+
 	if err != nil {
 		log.Printf("Error checking user existence: %v\n", err)
 		http.Error(w, "Error checking user existence", http.StatusInternalServerError)
 		return
 	}
-	if !userExists {
-		log.Println("User with this email doesnot exist")
-		http.Error(w, "User with this email doesnot exist", http.StatusConflict)
+
+	if user.Email == "" {
+		log.Println("User with this email does not exist")
+		http.Error(w, "User with this email does not exist", http.StatusConflict)
 		return
 	}
 
-	passwordMatches, err := CheckLogin(loginInfo, client)
-	if passwordMatches {
-		// Passwords match, send a positive response indicating successful login.
-		response := map[string]string{"message": "Successfully logged in"}
-		jsonResponse, _ := json.Marshal(response)
+	// User with the given email exists, now check the password
+	if user.Password == loginInfo.Password {
+		// Passwords match, return positive response with user data
+		jsonResponse, _ := json.Marshal(user)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResponse)
 	} else {
-		// Passwords do not match, send a negative response indicating login failure.
-		http.Error(w, "Failed to log in", http.StatusUnauthorized)
+		// Passwords do not match, return negative response with user (nil)
+		jsonResponse, _ := json.Marshal(nil)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized) // Use 401 for authentication failure
+		w.Write(jsonResponse)
 	}
 }
 
@@ -162,15 +144,26 @@ func CheckUserExistence(email string, client *mongo.Client) (bool, error) {
 	return true, nil
 }
 
-func RegisterUser(newUser models.User, client *mongo.Client) error {
+func RegisterUser(newUser models.User, client *mongo.Client) (models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	goChatDB := client.Database("goChat")
 	userCollection := goChatDB.Collection("userCollection")
+	filter := bson.M{"email": newUser.Email}
 	_, err := userCollection.InsertOne(context.Background(), newUser)
 	if err != nil {
 		fmt.Println("Insertion Error")
-		return err
+		return models.User{}, err
 	}
-	return nil
+	var user models.User
+	errr := userCollection.FindOne(ctx, filter).Decode(&user)
+	if errr != nil {
+		if err == mongo.ErrNoDocuments {
+			return models.User{}, nil // User not found, return empty user
+		}
+		return models.User{}, err
+	}
+	return user, nil
 }
 
 // function for handling signup endpoint
@@ -202,12 +195,14 @@ func SignUpUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 		return
 	}
 
-	registrationErr := RegisterUser(newUser, client)
+	newUser, registrationErr := RegisterUser(newUser, client)
 	if registrationErr != nil {
 		log.Printf("Error in registration of user: %v\n", registrationErr)
 		http.Error(w, "Error in registration of user", http.StatusInternalServerError)
 		return
 	}
+	jsonResponse, _ := json.Marshal(newUser)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("User registered successfully"))
+	w.Write(jsonResponse)
 }
