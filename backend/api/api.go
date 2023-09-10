@@ -10,6 +10,7 @@ import (
 
 	"github.com/shubmjagtap/goSpotify/backend/models"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -207,10 +208,98 @@ func SignUpUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 	w.Write(jsonResponse)
 }
 
-func AccessChat(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
-	fmt.Println("AccessChat function called")
-	// You can add any specific logic here if needed
+func convertToPrimitiveObjectID(id string) primitive.ObjectID {
+	objID, _ := primitive.ObjectIDFromHex(id)
+	return objID
+}
+
+func fillUserDetailsInChat(chat *models.Chat, client *mongo.Client) error {
+	ctx := context.TODO()
+	userCollection := client.Database("goChat").Collection("userCollection")
+
+	for i, userID := range chat.Users {
+		var user models.User
+		filter := bson.M{"_id": userID}
+		err := userCollection.FindOne(ctx, filter).Decode(&user)
+		if err != nil {
+			return err
+		}
+
+		// Populate user details in the chat.Users slice
+		chat.Users[i] = user
+	}
+
+	return nil
+}
+
+func CreateChat(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+	var requestData struct {
+		ByUserID string `json:"byUserId"`
+		ToUserID string `json:"toUserId"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+		return
+	}
+
+	if requestData.ByUserID == "" || requestData.ToUserID == "" {
+		http.Error(w, "Missing userId in request body", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.TODO()
+	chatCollection := client.Database("goChat").Collection("chatCollection")
+
+	msgSentByUserId := convertToPrimitiveObjectID(requestData.ByUserID)
+	msgSentToUserId := convertToPrimitiveObjectID(requestData.ToUserID)
+
+	filter := bson.M{
+		"isGroupChat": false,
+		"users": bson.M{
+			"$all": []primitive.ObjectID{msgSentByUserId, msgSentToUserId},
+		},
+	}
+
+	var existingChat models.Chat
+	err = chatCollection.FindOne(ctx, filter).Decode(&existingChat)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			http.Error(w, "Error finding chat", http.StatusInternalServerError)
+			return
+		}
+
+		newChat := models.Chat{
+			ChatName:    "sender", // Customize as needed
+			IsGroupChat: false,
+			Users:       []primitive.ObjectID{msgSentByUserId, msgSentToUserId},
+		}
+
+		insertResult, err := chatCollection.InsertOne(ctx, newChat)
+		if err != nil {
+			http.Error(w, "Error creating chat", http.StatusInternalServerError)
+			return
+		}
+
+		filter = bson.M{"_id": insertResult.InsertedID}
+		err = chatCollection.FindOne(ctx, filter).Decode(&existingChat)
+		if err != nil {
+			http.Error(w, "Error retrieving chat", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	fillUserDetailsInChat(&existingChat, client)
+
+	jsonResponse, err := json.Marshal(existingChat)
+	if err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
 }
 
 func FetchChats(w http.ResponseWriter, r *http.Request, client *mongo.Client) {

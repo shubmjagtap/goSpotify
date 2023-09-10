@@ -30,7 +30,7 @@ func CreateRoutes(router *mux.Router, client *mongo.Client) {
 	}).Methods("POST")
 
 	router.HandleFunc("/user/api/chat", func(w http.ResponseWriter, r *http.Request) {
-		api.AccessChat(w, r, client) // Pass client to AccessChat
+		api.CreateChat(w, r, client) // Pass client to AccessChat
 	}).Methods("POST")
 
 	router.HandleFunc("/user/api/chat", func(w http.ResponseWriter, r *http.Request) {
