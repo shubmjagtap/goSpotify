@@ -30,7 +30,7 @@ func CreateRoutes(router *mux.Router, client *mongo.Client) {
 func SetupCorsMiddleware(router *mux.Router) http.Handler {
 	corsMiddleware := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "OPTIONS"}),
+		handlers.AllowedMethods([]string{"GET", "OPTIONS", "POST"}),
 		handlers.AllowedHeaders([]string{"Content-Type"}),
 	)
 	corsRouter := corsMiddleware(router)

@@ -22,9 +22,10 @@ function ChatPage() {
 
     return (
         <div className="App">
-            {chats.map((chat) => (
+            <h1>Chats yet to be fetches</h1>
+            {/* {chats.map((chat) => (
                 <div key={chat._id}>{chat.chatName}</div>
-            ))}
+            ))} */}
         </div>
     );
 }

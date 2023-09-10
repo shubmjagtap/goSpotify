@@ -12,7 +12,6 @@ type User struct {
 	Name      string             `bson:"name,omitempty"`
 	Email     string             `bson:"email,omitempty"`
 	Password  string             `bson:"password,omitempty"`
-	Pic       string             `bson:"pic,omitempty"`
 	CreatedAt time.Time          `bson:"createdAt,omitempty"`
 	UpdatedAt time.Time          `bson:"updatedAt,omitempty"`
 }

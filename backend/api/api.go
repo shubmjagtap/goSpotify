@@ -113,7 +113,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 	defer r.Body.Close()
 
 	if loginInfo.Email == "" || loginInfo.Password == "" {
-		log.Println("Missing required fields")
+		log.Println("Missing required fields in LoginUser")
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
@@ -184,8 +184,8 @@ func SignUpUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 	}
 	defer r.Body.Close()
 
-	if newUser.Name == "" || newUser.Email == "" || newUser.Password == "" || newUser.Pic == "" {
-		log.Println("Missing required fields")
+	if newUser.Name == "" || newUser.Email == "" || newUser.Password == "" {
+		log.Println("Missing required fields in SignUp function")
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
