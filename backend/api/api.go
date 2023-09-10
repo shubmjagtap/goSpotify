@@ -13,7 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func HomeHandler(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+func GetAllUsersHandler(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 	// Get a handle to the "goChat" database and the "userCollection" collection
 	database := client.Database("goChat")
 	collection := database.Collection("userCollection")
@@ -205,4 +205,40 @@ func SignUpUser(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonResponse)
+}
+
+func AccessChat(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+	fmt.Println("AccessChat function called")
+	// You can add any specific logic here if needed
+	w.WriteHeader(http.StatusOK)
+}
+
+func FetchChats(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+	fmt.Println("FetchChats function called")
+	// You can add any specific logic here if needed
+	w.WriteHeader(http.StatusOK)
+}
+
+func CreateGroupChat(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+	fmt.Println("CreateGroupChat function called")
+	// You can add any specific logic here if needed
+	w.WriteHeader(http.StatusOK)
+}
+
+func RenameGroup(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+	fmt.Println("RenameGroup function called")
+	// You can add any specific logic here if needed
+	w.WriteHeader(http.StatusOK)
+}
+
+func RemoveFromGroup(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+	fmt.Println("RemoveFromGroup function called")
+	// You can add any specific logic here if needed
+	w.WriteHeader(http.StatusOK)
+}
+
+func AddToGroup(w http.ResponseWriter, r *http.Request, client *mongo.Client) {
+	fmt.Println("AddToGroup function called")
+	// You can add any specific logic here if needed
+	w.WriteHeader(http.StatusOK)
 }
